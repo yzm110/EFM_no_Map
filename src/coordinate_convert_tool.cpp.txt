@@ -1,0 +1,168 @@
+#include "coordinate_convert_tool.h"
+#include "CompileConfig.h"
+
+namespace CommonTool {
+
+CoordinateConvertTool::CoordinateConvertTool() : pj_wgs84_(nullptr), pj_utm_(nullptr) { Init(); }
+
+CoordinateConvertTool::~CoordinateConvertTool() {
+    if (pj_wgs84_) {
+        pj_free(pj_wgs84_);
+        pj_wgs84_ = nullptr;
+    }
+
+    if (pj_utm_) {
+        pj_free(pj_utm_);
+        pj_utm_ = nullptr;
+    }
+}
+
+CoordinateConvertTool* CoordinateConvertTool::GetInstance() {
+    static CoordinateConvertTool instance;
+    return &instance;
+}
+
+bool CoordinateConvertTool::Init() {
+    param_wgs84_ = "+proj=latlong +ellps=WGS84";
+    param_utm_ = "+proj=utm +zone=51 +ellps=WGS84 +datum=WGS84 +units=m +no_defs";
+    if (pj_wgs84_) {
+        pj_free(pj_wgs84_);
+        pj_wgs84_ = nullptr;
+    }
+    if (pj_utm_) {
+        pj_free(pj_utm_);
+        pj_utm_ = nullptr;
+    }
+
+    if (!(pj_wgs84_ = pj_init_plus(param_wgs84_.c_str()))) {
+        std::string err_msg = "Fail to pj_init_plus " + param_wgs84_;
+        return false;
+    }
+
+    if (!(pj_utm_ = pj_init_plus(param_utm_.c_str()))) {
+        std::string err_msg = "Fail to pj_init_plus " + param_utm_;
+        pj_free(pj_utm_);
+        pj_utm_ = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+bool CoordinateConvertTool::WGS84ToUTM(const double longitude, const double latitude, const double height_ellipsoid,
+                                       double* utm_x, double* utm_y, double* utm_z) {
+    if (utm_x == nullptr || utm_y == nullptr || utm_z == nullptr) {
+        return false;
+    }
+
+    if (!pj_wgs84_ || !pj_utm_) {
+        std::string err_msg = "no transform param";
+        return false;
+    }
+
+    double gps_longitude = longitude;
+    double gps_latitude = latitude;
+    double gps_alt = height_ellipsoid;
+
+    if (true || pj_is_latlong(pj_wgs84_)) {
+        gps_longitude *= DEG_TO_RAD;
+        gps_latitude *= DEG_TO_RAD;
+        gps_alt = height_ellipsoid;
+    }
+
+    if (0 != pj_transform(pj_wgs84_, pj_utm_, 1, 1, &gps_longitude, &gps_latitude, &gps_alt)) {
+        std::string err_msg = "fail to transform coordinate";
+        return false;
+    }
+
+    if (false || pj_is_latlong(pj_utm_)) {
+        gps_longitude *= RAD_TO_DEG;
+        gps_latitude *= RAD_TO_DEG;
+    }
+
+    *utm_x = gps_longitude;
+    *utm_y = gps_latitude;
+    *utm_z = gps_alt;
+
+    return true;
+}
+
+bool CoordinateConvertTool::UTMToWGS84(const double utm_x, const double utm_y, const double utm_z, double* longitude,
+                                       double* latitude, double* height) {
+    if (longitude == nullptr || latitude == nullptr || height == nullptr) {
+        return false;
+    }
+    if (!pj_wgs84_ || !pj_utm_) {
+        std::string err_msg = "no transform param";
+        return false;
+    }
+
+    double gps_longitude = utm_x;
+    double gps_latitude = utm_y;
+    double gps_alt = utm_z;
+
+    if (false || pj_is_latlong(pj_utm_)) {
+        gps_longitude *= DEG_TO_RAD;
+        gps_latitude *= DEG_TO_RAD;
+        gps_alt = utm_z;
+    }
+
+    if (0 != pj_transform(pj_utm_, pj_wgs84_, 1, 1, &gps_longitude, &gps_latitude, &gps_alt)) {
+        std::string err_msg = "fail to transform coordinate";
+        return false;
+    }
+
+    if (true || pj_is_latlong(pj_wgs84_)) {
+        gps_longitude *= RAD_TO_DEG;
+        gps_latitude *= RAD_TO_DEG;
+    }
+
+    *longitude = gps_longitude;
+    *latitude = gps_latitude;
+    *height = gps_alt;
+
+    return true;
+}
+void CoordinateConvertTool::Transformation(const double& startX, const double& startY, double heading, double& transX,
+                                           double& transY) {
+    // heading = heading * 3.1415926f / 180;
+    double x = 0, y = 0;
+    transX = transX - startX;
+    transY = transY - startY;
+
+    x = transX * cos(heading) + transY * sin(heading);
+    y = transY * cos(heading) - transX * sin(heading);
+    transX = x;
+    transY = y;
+}
+
+void CoordinateConvertTool::LineWGS2UTM(const std::vector<message::map_map::s_GeometryPoint_t>& geometry_points,
+                                        EFMRefLinePoints& linepts_utm) {
+    double lon = 0;
+    double lat = 0;
+    double utm_e = 0;  // x
+    double utm_n = 0;  // y
+    double utm_z = 0;
+    EFMPoint point_temp;
+    for (size_t i = 0; i < geometry_points.size(); ++i) {
+        // -------get the relative coordinate of the NED---------------
+        // the north coordinate value of NED, x, unit/m
+        lat = geometry_points[i].Latitude.Latitude * 360.0 / (4294967296);
+        // the east coordinate value of NED, y, unit/m
+        lon = geometry_points[i].Longitude.Longitude * 360.0 / (4294967296);
+        // the down coordinate value  of NED, z, unit/m
+        // pointNED.z = -linepts_wgs[i].altitude + ori_pt.altitude;
+
+        // ------transform the coordinate of NED to vehicle coordinate--------
+        // pointEC_x = pointNED_y * cosH - pointNED_x * sinH;
+        // pointEC_y = pointNED_x * cosH + pointNED_y * sinH;
+        WGS84ToUTM(lon, lat, 0, &utm_e, &utm_n, &utm_z);
+        // pointEC.offset = linepts_wgs[i].offset;
+        // pointEC.slope = linepts_wgs[i].slope;
+        // pointEC.Curve = linepts_wgs[i].Curve;
+        point_temp.x = utm_e;
+        point_temp.y = utm_n;
+        linepts_utm.emplace_back(point_temp);
+    }
+}
+}  // namespace CommonTool

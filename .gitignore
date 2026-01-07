@@ -1,0 +1,4 @@
+# Ignore the build folder
+build/
+cross/
+qnx.yaml

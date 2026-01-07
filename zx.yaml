@@ -1,0 +1,54 @@
+---
+name: _EnvironmentModel
+lib: Dynamic
+compiler: GNU
+archive: Ar
+std: Cpp14
+ppms: 
+  - BUILD_WITH_ZPLOT
+  - EFM_PLOT2D
+  # - SPLIT_0930
+  #- EM_COUT
+  # - DATA_TO_JSON
+  # - MODIFY_MERGE
+  # - SMOOTH
+  #- CLM_COUT
+  #- EXTRACTREFLINE_COUT
+  #- SCENARIOJUDGEMODEL_COUT
+ # - USE_PROJ4
+  
+deps:
+- Header: include
+- Header: ../../framework/include
+- Header: ../../tool/stepai/earth/mantle/include
+- Header: ../../tool/stepai/earth/shell/include
+- Header: ../../idl/include
+- Header: /opt/bstos/1.3.4.1/sysroots/aarch64-bst-linux/include/
+- ZuXia: ../../idl
+
+- Lib:
+  - osqp
+  - Dynamic
+  - ./deps
+- Lib:
+  - mantle
+  - Static
+  - ../../tool/stepai/earth/mantle/lib
+- Lib:
+  - pthread
+  - Static
+  - ~
+- Lib:
+  - rt
+  - Static
+  - ~
+- Lib:
+  - dl
+  - Static
+  - ~
+sanitizer: false
+sani_thread: false
+zx_version:
+  major: 1
+  minor: 0
+  patch: 0

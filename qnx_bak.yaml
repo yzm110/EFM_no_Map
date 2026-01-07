@@ -1,0 +1,45 @@
+append_deps_front_back: false
+name: _EnvironmentModel
+archive:
+  Custom: tool_stepai_replace/qnx710/qnx710/host/linux/x86_64/usr/bin/aarch64-unknown-nto-qnx7.1.0-ar
+compiler:
+  Custom: tool_stepai_replace/qnx710/qnx710/host/linux/x86_64/usr/bin/aarch64-unknown-nto-qnx7.1.0-g++
+deps: 
+- - Lib:
+    - mantle
+    - Static
+    - ../../tool/stepai/earth/mantle/lib
+  - Remove
+- - Lib:
+    - mantle
+    - Static
+    - ../../tool/stepai/qnx/mantle/lib
+  - Append
+- - Lib:
+    - bsw
+    - Dynamic
+    - /opt/bstos/1.3.4.1/sysroots/aarch64-bst-linux/lib/
+  - Append
+- - Lib:
+    - rt
+    - Static
+    - null
+  - Remove
+- - Lib:
+    - pthread
+    - Static
+    - null
+  - Remove
+- - Lib:
+    - dl
+    - Static
+    - null
+  - Remove
+- - Lib:
+    - osqp
+    - Dynamic
+    - ./deps/deploy_libs
+  - Overwrite
+extra_flags:
+ppms: []
+sysroot: tool_stepai_replace/qnx710/qnx710/target/qnx7

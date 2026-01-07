@@ -1,0 +1,49 @@
+/*
+ * @Author: xiaofeng.liu xiaofeng.liu@jicaai.com
+ * @Date: 2023-11-30 10:07:50
+ * @LastEditors: xiaofeng.liu xiaofeng.liu@jicaai.com
+ * @LastEditTime: 2023-11-30 10:12:59
+ * @FilePath: /repo/code/dx11_noa/application/environmentmodelfunction/include/coordinate_convert_tool.h
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+#pragma once
+#include "CommonDataType.h"
+#include "topic/topic_trait.h"
+#include <iostream>
+// #include <proj_api.h>
+#include <string>
+
+// #include "status.h"
+
+namespace CommonTool {
+
+class CoordinateConvertTool {
+   public:
+    CoordinateConvertTool();
+    ~CoordinateConvertTool();
+
+    static CoordinateConvertTool* GetInstance();
+
+    bool WGS84ToUTM(const double longitude, const double latitude, const double height_ellipsoid, double* utm_x,
+                    double* utm_y, double* utm_z);
+    bool UTMToWGS84(const double utm_x, const double utm_y, const double utm_z, double* longitude, double* latitude,
+                    double* height);
+    // UTM转自车
+    void Transformation(const double& startX, const double& startY, double heading, double& transX, double& transY);
+
+    void LineWGS2UTM(const std::vector<message::map_map::s_GeometryPoint_t>& geometry_points,
+                     EFMRefLinePoints& linepts_utm);
+    //bool wgs84toUTM2(const double lat, const double lon, double& x, double& y);
+
+    //void LineWGS2UTM2(const std::vector<message::map_map::s_GeometryPoint_t>& geometry_points,
+    //                  EFMRefLinePoints& linepts_utm);
+
+    bool Init();
+
+    std::string param_wgs84_;
+    std::string param_utm_;
+
+    projPJ pj_wgs84_;
+    projPJ pj_utm_;
+};
+}  // namespace CommonTool
